@@ -15,6 +15,16 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Equations",
   description: "A fun math game for kids",
+  openGraph: {
+    title: "Equations",
+    description: "A fun math game for kids",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Equations",
+    description: "A fun math game for kids",
+  },
 };
 
 export default function RootLayout({
