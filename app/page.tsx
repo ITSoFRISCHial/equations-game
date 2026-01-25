@@ -46,13 +46,6 @@ interface FloatingSymbol {
   rotationSpeed: number;
 }
 
-interface LetterPosition {
-  x: number;
-  y: number;
-  rotation: number;
-  scale: number;
-}
-
 function generateFloatingSymbols(count: number): FloatingSymbol[] {
   return Array.from({ length: count }, (_, i) => ({
     id: i,
@@ -111,9 +104,7 @@ function FloatingBackground() {
 }
 
 function IntroAnimation({ onComplete }: { onComplete: () => void }) {
-  const [letterPositions, setLetterPositions] = useState<LetterPosition[]>([]);
   const [isForming, setIsForming] = useState(false);
-  const [animationPhase, setAnimationPhase] = useState<"floating" | "forming" | "complete">("floating");
 
   // Generate random starting positions for each letter
   const initialPositions = useMemo(() =>
@@ -129,7 +120,7 @@ function IntroAnimation({ onComplete }: { onComplete: () => void }) {
   // Final positions (centered, in a row)
   const finalPositions = useMemo(() =>
     TITLE_LETTERS.map((_, i) => ({
-      x: 50 + (i - 4) * 6, // Centered with spacing
+      x: 50 + (i - 4) * 6,
       y: 50,
       rotation: 0,
       scale: 1,
@@ -138,43 +129,23 @@ function IntroAnimation({ onComplete }: { onComplete: () => void }) {
   );
 
   useEffect(() => {
-    // Initialize with random positions
-    setLetterPositions(initialPositions);
-
-    // Float around for 4 seconds
-    const floatInterval = setInterval(() => {
-      if (animationPhase === "floating") {
-        setLetterPositions((prev) =>
-          prev.map((pos) => ({
-            x: Math.max(5, Math.min(95, pos.x + (Math.random() - 0.5) * 8)),
-            y: Math.max(5, Math.min(95, pos.y + (Math.random() - 0.5) * 8)),
-            rotation: pos.rotation + (Math.random() - 0.5) * 30,
-            scale: Math.max(0.6, Math.min(1.4, pos.scale + (Math.random() - 0.5) * 0.2)),
-          }))
-        );
-      }
+    // Start forming animation after a brief moment
+    const formTimeout = setTimeout(() => {
+      setIsForming(true);
     }, 100);
 
-    // After 4 seconds, start forming the word
-    const formTimeout = setTimeout(() => {
-      setAnimationPhase("forming");
-      setIsForming(true);
-      clearInterval(floatInterval);
-      setLetterPositions(finalPositions);
-    }, 4000);
-
-    // After 5 seconds total, complete
+    // Complete after 3 seconds
     const completeTimeout = setTimeout(() => {
-      setAnimationPhase("complete");
       onComplete();
-    }, 5500);
+    }, 3000);
 
     return () => {
-      clearInterval(floatInterval);
       clearTimeout(formTimeout);
       clearTimeout(completeTimeout);
     };
-  }, [initialPositions, finalPositions, onComplete, animationPhase]);
+  }, [onComplete]);
+
+  const positions = isForming ? finalPositions : initialPositions;
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center">
@@ -184,11 +155,11 @@ function IntroAnimation({ onComplete }: { onComplete: () => void }) {
           key={index}
           className="absolute font-bold text-6xl md:text-8xl"
           style={{
-            left: `${letterPositions[index]?.x || 50}%`,
-            top: `${letterPositions[index]?.y || 50}%`,
+            left: `${positions[index]?.x || 50}%`,
+            top: `${positions[index]?.y || 50}%`,
             color: letter.color,
-            transform: `translate(-50%, -50%) rotate(${letterPositions[index]?.rotation || 0}deg) scale(${letterPositions[index]?.scale || 1})`,
-            transition: isForming ? "all 1s cubic-bezier(0.34, 1.56, 0.64, 1)" : "all 0.1s ease-out",
+            transform: `translate(-50%, -50%) rotate(${positions[index]?.rotation || 0}deg) scale(${positions[index]?.scale || 1})`,
+            transition: "all 2.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
             textShadow: `0 0 20px ${letter.color}, 0 0 40px ${letter.color}`,
           }}
         >
