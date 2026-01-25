@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 
 interface Equation {
   num1: number;
@@ -20,6 +20,184 @@ const RAINBOW_COLORS = [
 ];
 
 const EQUATIONS_PER_ROUND = 3;
+
+// Letters for "EQUATIONS" with + as the t
+const TITLE_LETTERS = [
+  { char: "E", color: "#FF0000" },
+  { char: "q", color: "#FF7F00" },
+  { char: "u", color: "#FFFF00" },
+  { char: "a", color: "#00FF00" },
+  { char: "+", color: "#0000FF" }, // t is a plus sign
+  { char: "i", color: "#4B0082" },
+  { char: "o", color: "#9400D3" },
+  { char: "n", color: "#FF0000" },
+  { char: "s", color: "#FF7F00" },
+];
+
+interface FloatingSymbol {
+  id: number;
+  x: number;
+  y: number;
+  symbol: "+" | "-";
+  size: number;
+  opacity: number;
+  speed: number;
+  rotation: number;
+  rotationSpeed: number;
+}
+
+interface LetterPosition {
+  x: number;
+  y: number;
+  rotation: number;
+  scale: number;
+}
+
+function generateFloatingSymbols(count: number): FloatingSymbol[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    symbol: Math.random() > 0.5 ? "+" : "-",
+    size: Math.random() * 40 + 30,
+    opacity: Math.random() * 0.15 + 0.05,
+    speed: Math.random() * 0.5 + 0.2,
+    rotation: Math.random() * 360,
+    rotationSpeed: (Math.random() - 0.5) * 2,
+  }));
+}
+
+function FloatingBackground() {
+  const [symbols, setSymbols] = useState<FloatingSymbol[]>([]);
+
+  useEffect(() => {
+    setSymbols(generateFloatingSymbols(15));
+
+    const interval = setInterval(() => {
+      setSymbols((prev) =>
+        prev.map((s) => ({
+          ...s,
+          y: s.y - s.speed,
+          rotation: s.rotation + s.rotationSpeed,
+          // Reset to bottom when reaching top
+          ...(s.y < -10 ? { y: 110, x: Math.random() * 100 } : {}),
+        }))
+      );
+    }, 50);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+      {symbols.map((s) => (
+        <div
+          key={s.id}
+          className="absolute font-bold text-white"
+          style={{
+            left: `${s.x}%`,
+            top: `${s.y}%`,
+            fontSize: `${s.size}px`,
+            opacity: s.opacity,
+            transform: `rotate(${s.rotation}deg)`,
+            transition: "top 0.05s linear",
+          }}
+        >
+          {s.symbol}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function IntroAnimation({ onComplete }: { onComplete: () => void }) {
+  const [letterPositions, setLetterPositions] = useState<LetterPosition[]>([]);
+  const [isForming, setIsForming] = useState(false);
+  const [animationPhase, setAnimationPhase] = useState<"floating" | "forming" | "complete">("floating");
+
+  // Generate random starting positions for each letter
+  const initialPositions = useMemo(() =>
+    TITLE_LETTERS.map(() => ({
+      x: Math.random() * 80 + 10,
+      y: Math.random() * 80 + 10,
+      rotation: Math.random() * 720 - 360,
+      scale: Math.random() * 0.5 + 0.8,
+    })),
+    []
+  );
+
+  // Final positions (centered, in a row)
+  const finalPositions = useMemo(() =>
+    TITLE_LETTERS.map((_, i) => ({
+      x: 50 + (i - 4) * 6, // Centered with spacing
+      y: 50,
+      rotation: 0,
+      scale: 1,
+    })),
+    []
+  );
+
+  useEffect(() => {
+    // Initialize with random positions
+    setLetterPositions(initialPositions);
+
+    // Float around for 4 seconds
+    const floatInterval = setInterval(() => {
+      if (animationPhase === "floating") {
+        setLetterPositions((prev) =>
+          prev.map((pos) => ({
+            x: Math.max(5, Math.min(95, pos.x + (Math.random() - 0.5) * 8)),
+            y: Math.max(5, Math.min(95, pos.y + (Math.random() - 0.5) * 8)),
+            rotation: pos.rotation + (Math.random() - 0.5) * 30,
+            scale: Math.max(0.6, Math.min(1.4, pos.scale + (Math.random() - 0.5) * 0.2)),
+          }))
+        );
+      }
+    }, 100);
+
+    // After 4 seconds, start forming the word
+    const formTimeout = setTimeout(() => {
+      setAnimationPhase("forming");
+      setIsForming(true);
+      clearInterval(floatInterval);
+      setLetterPositions(finalPositions);
+    }, 4000);
+
+    // After 5 seconds total, complete
+    const completeTimeout = setTimeout(() => {
+      setAnimationPhase("complete");
+      onComplete();
+    }, 5500);
+
+    return () => {
+      clearInterval(floatInterval);
+      clearTimeout(formTimeout);
+      clearTimeout(completeTimeout);
+    };
+  }, [initialPositions, finalPositions, onComplete, animationPhase]);
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center">
+      <FloatingBackground />
+      {TITLE_LETTERS.map((letter, index) => (
+        <div
+          key={index}
+          className="absolute font-bold text-6xl md:text-8xl"
+          style={{
+            left: `${letterPositions[index]?.x || 50}%`,
+            top: `${letterPositions[index]?.y || 50}%`,
+            color: letter.color,
+            transform: `translate(-50%, -50%) rotate(${letterPositions[index]?.rotation || 0}deg) scale(${letterPositions[index]?.scale || 1})`,
+            transition: isForming ? "all 1s cubic-bezier(0.34, 1.56, 0.64, 1)" : "all 0.1s ease-out",
+            textShadow: `0 0 20px ${letter.color}, 0 0 40px ${letter.color}`,
+          }}
+        >
+          {letter.char}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function generateEquation(): Equation {
   const isAddition = Math.random() > 0.5;
@@ -42,17 +220,14 @@ function generateAnswerChoices(correctAnswer: number): number[] {
   choices.add(correctAnswer);
 
   while (choices.size < 5) {
-    // Generate wrong answers that are close to the correct answer
     const offset = Math.floor(Math.random() * 10) - 5;
-    let wrongAnswer = correctAnswer + offset;
+    const wrongAnswer = correctAnswer + offset;
 
-    // Keep answers in valid range (0-20) and not equal to correct answer
     if (wrongAnswer >= 0 && wrongAnswer <= 20 && wrongAnswer !== correctAnswer) {
       choices.add(wrongAnswer);
     }
   }
 
-  // Shuffle the choices
   return Array.from(choices).sort(() => Math.random() - 0.5);
 }
 
@@ -72,15 +247,13 @@ function Fireworks({ number, onComplete }: { number: number; onComplete: () => v
   const [particles, setParticles] = useState<Particle[]>([]);
 
   useEffect(() => {
-    // Create multiple firework bursts
     for (let i = 0; i < 5; i++) {
       setTimeout(() => {
         const fw = {
-          x: Math.random() * 80 + 10, // 10-90% of screen width
-          y: Math.random() * 60 + 20, // 20-80% of screen height
+          x: Math.random() * 80 + 10,
+          y: Math.random() * 60 + 20,
         };
 
-        // Create particles for this firework
         const newParticles: Particle[] = [];
         for (let j = 0; j < 30; j++) {
           const angle = (Math.PI * 2 * j) / 30;
@@ -94,14 +267,13 @@ function Fireworks({ number, onComplete }: { number: number; onComplete: () => v
             color: RAINBOW_COLORS[Math.floor(Math.random() * RAINBOW_COLORS.length)],
             size: Math.random() * 8 + 4,
             opacity: 1,
-            isNumber: j % 5 === 0, // Some particles show the number
+            isNumber: j % 5 === 0,
           });
         }
         setParticles((prev) => [...prev, ...newParticles]);
       }, i * 200);
     }
 
-    // Animate particles
     const interval = setInterval(() => {
       setParticles((prev) =>
         prev
@@ -109,14 +281,13 @@ function Fireworks({ number, onComplete }: { number: number; onComplete: () => v
             ...p,
             x: p.x + p.vx * 0.5,
             y: p.y + p.vy * 0.5,
-            vy: p.vy + 0.1, // gravity
+            vy: p.vy + 0.1,
             opacity: p.opacity - 0.02,
           }))
           .filter((p) => p.opacity > 0)
       );
     }, 30);
 
-    // Clean up after animation
     const timeout = setTimeout(() => {
       clearInterval(interval);
       onComplete();
@@ -156,8 +327,20 @@ function Fireworks({ number, onComplete }: { number: number; onComplete: () => v
   );
 }
 
+function RainbowTitle() {
+  return (
+    <h1 className="text-4xl md:text-6xl font-bold mb-8 text-center">
+      {TITLE_LETTERS.map((letter, index) => (
+        <span key={index} style={{ color: letter.color }}>
+          {letter.char}
+        </span>
+      ))}
+    </h1>
+  );
+}
+
 export default function MathGame() {
-  const [gameState, setGameState] = useState<"start" | "playing" | "feedback" | "roundEnd">("start");
+  const [gameState, setGameState] = useState<"intro" | "start" | "playing" | "feedback" | "roundEnd">("intro");
   const [equation, setEquation] = useState<Equation | null>(null);
   const [choices, setChoices] = useState<number[]>([]);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
@@ -165,6 +348,10 @@ export default function MathGame() {
   const [score, setScore] = useState({ correct: 0, wrong: 0 });
   const [questionNumber, setQuestionNumber] = useState(0);
   const [showFireworks, setShowFireworks] = useState(false);
+
+  const handleIntroComplete = useCallback(() => {
+    setGameState("start");
+  }, []);
 
   const startNewQuestion = useCallback(() => {
     const newEquation = generateEquation();
@@ -219,7 +406,6 @@ export default function MathGame() {
         return "bg-red-500 hover:bg-red-500";
       }
     }
-    // Rainbow colors for buttons
     const colors = [
       "bg-red-500 hover:bg-red-600",
       "bg-orange-500 hover:bg-orange-600",
@@ -230,27 +416,22 @@ export default function MathGame() {
     return colors[index];
   };
 
+  const showFloatingBackground = gameState === "start" || gameState === "roundEnd";
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-400 to-red-400 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-400 to-red-400 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {gameState === "intro" && <IntroAnimation onComplete={handleIntroComplete} />}
+
+      {showFloatingBackground && <FloatingBackground />}
+
       {showFireworks && equation && (
         <Fireworks number={equation.answer} onComplete={handleFireworksComplete} />
       )}
 
-      {/* Rainbow Header */}
-      <h1 className="text-4xl md:text-6xl font-bold mb-8 text-center">
-        <span className="text-red-500">M</span>
-        <span className="text-orange-500">a</span>
-        <span className="text-yellow-400">t</span>
-        <span className="text-green-500">h</span>
-        <span className="text-blue-500"> </span>
-        <span className="text-indigo-500">F</span>
-        <span className="text-purple-500">u</span>
-        <span className="text-red-500">n</span>
-        <span className="text-orange-500">!</span>
-      </h1>
+      {gameState !== "intro" && <RainbowTitle />}
 
       {gameState === "start" && (
-        <div className="bg-white rounded-3xl p-8 shadow-2xl text-center">
+        <div className="bg-white rounded-3xl p-8 shadow-2xl text-center relative z-10">
           <p className="text-2xl mb-6 text-gray-700">Ready to play?</p>
           <p className="text-lg mb-6 text-gray-500">Answer {EQUATIONS_PER_ROUND} math questions!</p>
           <button
@@ -263,20 +444,17 @@ export default function MathGame() {
       )}
 
       {(gameState === "playing" || gameState === "feedback") && equation && (
-        <div className="bg-white rounded-3xl p-8 shadow-2xl text-center w-full max-w-lg">
-          {/* Score Display */}
+        <div className="bg-white rounded-3xl p-8 shadow-2xl text-center w-full max-w-lg relative z-10">
           <div className="flex justify-between mb-4 text-lg">
             <span className="text-green-600 font-bold">✓ {score.correct}</span>
             <span className="text-gray-500">Question {questionNumber} of {EQUATIONS_PER_ROUND}</span>
             <span className="text-red-600 font-bold">✗ {score.wrong}</span>
           </div>
 
-          {/* Equation */}
           <div className="text-6xl md:text-7xl font-bold mb-8 text-gray-800">
             {equation.num1} {equation.operator} {equation.num2} = ?
           </div>
 
-          {/* Answer Choices */}
           <div className="grid grid-cols-5 gap-2 md:gap-4 mb-6">
             {choices.map((choice, index) => (
               <button
@@ -292,12 +470,11 @@ export default function MathGame() {
             ))}
           </div>
 
-          {/* Feedback */}
           {gameState === "feedback" && (
             <div className="mt-4">
               {isCorrect ? (
                 <div className="text-3xl font-bold text-green-600 animate-bounce">
-                  🎉 Correct! 🎉
+                  Correct!
                 </div>
               ) : (
                 <div className="text-2xl font-bold text-red-600">
@@ -318,10 +495,10 @@ export default function MathGame() {
       )}
 
       {gameState === "roundEnd" && (
-        <div className="bg-white rounded-3xl p-8 shadow-2xl text-center">
+        <div className="bg-white rounded-3xl p-8 shadow-2xl text-center relative z-10">
           <h2 className="text-4xl font-bold mb-6 text-gray-800">Round Complete!</h2>
           <div className="text-6xl mb-4">
-            {score.correct === EQUATIONS_PER_ROUND ? "🌟" : score.correct >= 2 ? "👏" : "💪"}
+            {score.correct === EQUATIONS_PER_ROUND ? "⭐" : score.correct >= 2 ? "👏" : "💪"}
           </div>
           <div className="text-2xl mb-4">
             <span className="text-green-600 font-bold">{score.correct} correct</span>
