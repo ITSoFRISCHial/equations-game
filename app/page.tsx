@@ -370,11 +370,17 @@ export default function MathGame() {
 
   const getButtonColor = (index: number, choice: number) => {
     if (gameState === "feedback" && equation) {
+      // Correct answer - always show green and bouncing
       if (choice === equation.answer) {
         return "bg-green-500 hover:bg-green-500 scale-110 animate-bounce";
       }
+      // Wrong answer that was selected - show red
       if (choice === selectedAnswer && !isCorrect) {
         return "bg-red-500 hover:bg-red-500";
+      }
+      // Other answers when wrong - gray them out
+      if (!isCorrect) {
+        return "bg-gray-400 hover:bg-gray-400 opacity-50";
       }
     }
     const colors = [
