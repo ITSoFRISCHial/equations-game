@@ -9,25 +9,56 @@ interface Equation {
   answer: number;
 }
 
+interface CountingEmoji {
+  emoji: string;
+  name: string;
+}
+
+const COUNTING_EMOJIS: CountingEmoji[] = [
+  { emoji: "🍎", name: "apple" },
+  { emoji: "🍌", name: "banana" },
+  { emoji: "🍪", name: "cookie" },
+  { emoji: "🍕", name: "pizza" },
+  { emoji: "🧁", name: "cupcake" },
+  { emoji: "🍦", name: "ice cream" },
+  { emoji: "🐶", name: "dog" },
+  { emoji: "🐱", name: "cat" },
+  { emoji: "🐰", name: "rabbit" },
+  { emoji: "🐟", name: "fish" },
+  { emoji: "🧸", name: "teddy bear" },
+  { emoji: "🎈", name: "balloon" },
+  { emoji: "⚽", name: "soccer ball" },
+  { emoji: "🚗", name: "car" },
+  { emoji: "🚌", name: "bus" },
+  { emoji: "✈️", name: "airplane" },
+  { emoji: "🚀", name: "rocket" },
+  { emoji: "⭐", name: "star" },
+  { emoji: "❤️", name: "heart" },
+  { emoji: "🌸", name: "flower" },
+  { emoji: "☀️", name: "sun" },
+  { emoji: "🏠", name: "house" },
+  { emoji: "🎁", name: "gift" },
+  { emoji: "🧦", name: "sock" },
+];
+
 const RAINBOW_COLORS = [
-  "#FF0000", // Red
-  "#FF7F00", // Orange
-  "#FFFF00", // Yellow
-  "#00FF00", // Green
-  "#0000FF", // Blue
-  "#4B0082", // Indigo
-  "#9400D3", // Violet
+  "#FF0000",
+  "#FF7F00",
+  "#FFFF00",
+  "#00FF00",
+  "#0000FF",
+  "#4B0082",
+  "#9400D3",
 ];
 
 const EQUATIONS_PER_ROUND = 3;
 
-// Letters for "EQUATIONS" with + as the t
 const TITLE_LETTERS = [
   { char: "E", color: "#FF0000" },
   { char: "q", color: "#FF7F00" },
   { char: "u", color: "#FFFF00" },
   { char: "a", color: "#00FF00" },
-  { char: "+", color: "#0000FF" }, // t is a plus sign
+  { char: "+", color: "#0000FF" },
   { char: "i", color: "#4B0082" },
   { char: "o", color: "#9400D3" },
   { char: "n", color: "#FF0000" },
@@ -72,7 +103,6 @@ function FloatingBackground() {
           ...s,
           y: s.y - s.speed,
           rotation: s.rotation + s.rotationSpeed,
-          // Reset to bottom when reaching top
           ...(s.y < -10 ? { y: 110, x: Math.random() * 100 } : {}),
         }))
       );
@@ -106,7 +136,6 @@ function FloatingBackground() {
 function IntroAnimation({ onComplete }: { onComplete: () => void }) {
   const [isForming, setIsForming] = useState(false);
 
-  // Generate random starting positions for each letter
   const initialPositions = useMemo(() =>
     TITLE_LETTERS.map(() => ({
       x: Math.random() * 80 + 10,
@@ -117,7 +146,6 @@ function IntroAnimation({ onComplete }: { onComplete: () => void }) {
     []
   );
 
-  // Final positions (centered, in a row)
   const finalPositions = useMemo(() =>
     TITLE_LETTERS.map((_, i) => ({
       x: 50 + (i - 4) * 6,
@@ -129,12 +157,10 @@ function IntroAnimation({ onComplete }: { onComplete: () => void }) {
   );
 
   useEffect(() => {
-    // Start forming animation after a brief moment
     const formTimeout = setTimeout(() => {
       setIsForming(true);
     }, 100);
 
-    // Complete after 3 seconds
     const completeTimeout = setTimeout(() => {
       onComplete();
     }, 3000);
@@ -174,12 +200,12 @@ function generateEquation(): Equation {
   const isAddition = Math.random() > 0.5;
 
   if (isAddition) {
-    const answer = Math.floor(Math.random() * 21); // 0-20
+    const answer = Math.floor(Math.random() * 21);
     const num1 = Math.floor(Math.random() * (answer + 1));
     const num2 = answer - num1;
     return { num1, num2, operator: "+", answer };
   } else {
-    const num1 = Math.floor(Math.random() * 21); // 0-20
+    const num1 = Math.floor(Math.random() * 21);
     const num2 = Math.floor(Math.random() * (num1 + 1));
     const answer = num1 - num2;
     return { num1, num2, operator: "-", answer };
@@ -200,6 +226,189 @@ function generateAnswerChoices(correctAnswer: number): number[] {
   }
 
   return Array.from(choices).sort(() => Math.random() - 0.5);
+}
+
+function getRandomEmoji(): CountingEmoji {
+  return COUNTING_EMOJIS[Math.floor(Math.random() * COUNTING_EMOJIS.length)];
+}
+
+function pluralize(name: string, count: number): string {
+  if (count === 1) return name;
+  if (name.endsWith("s") || name.endsWith("sh") || name.endsWith("ch")) {
+    return name + "es";
+  }
+  if (name.endsWith("y") && !["a", "e", "i", "o", "u"].includes(name[name.length - 2])) {
+    return name.slice(0, -1) + "ies";
+  }
+  return name + "s";
+}
+
+function EmojiGroup({ count, emoji, maxPerRow = 5 }: { count: number; emoji: string; maxPerRow?: number }) {
+  const rows: string[][] = [];
+  let remaining = count;
+
+  while (remaining > 0) {
+    const rowCount = Math.min(remaining, maxPerRow);
+    rows.push(Array(rowCount).fill(emoji));
+    remaining -= rowCount;
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      {rows.map((row, i) => (
+        <div key={i} className="flex gap-0.5">
+          {row.map((e, j) => (
+            <span key={j} className="text-lg sm:text-xl md:text-2xl">{e}</span>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EmojiEquationDisplay({
+  equation,
+  currentEmoji
+}: {
+  equation: Equation;
+  currentEmoji: CountingEmoji;
+}) {
+  return (
+    <div className="flex items-center justify-center gap-2 sm:gap-4 w-full">
+      {/* First group */}
+      <div className="flex flex-col items-center">
+        <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-1">
+          {equation.num1}
+        </div>
+        <div className="bg-gray-100 rounded-xl p-2 min-h-[60px] flex items-center justify-center">
+          <EmojiGroup count={equation.num1} emoji={currentEmoji.emoji} />
+        </div>
+      </div>
+
+      {/* Operator */}
+      <div className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-800">
+        {equation.operator}
+      </div>
+
+      {/* Second group */}
+      <div className="flex flex-col items-center">
+        <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-1">
+          {equation.num2}
+        </div>
+        <div className="bg-gray-100 rounded-xl p-2 min-h-[60px] flex items-center justify-center">
+          <EmojiGroup count={equation.num2} emoji={currentEmoji.emoji} />
+        </div>
+      </div>
+
+      {/* Equals */}
+      <div className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-800">
+        =
+      </div>
+
+      {/* Question mark */}
+      <div className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-800">
+        ?
+      </div>
+    </div>
+  );
+}
+
+function TextEquationDisplay({ equation }: { equation: Equation }) {
+  return (
+    <div className="text-5xl sm:text-6xl md:text-7xl font-bold text-gray-800">
+      {equation.num1} {equation.operator} {equation.num2} = ?
+    </div>
+  );
+}
+
+function PlayButton({
+  equation,
+  isEmojiMode,
+  currentEmoji
+}: {
+  equation: Equation;
+  isEmojiMode: boolean;
+  currentEmoji: CountingEmoji;
+}) {
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const speak = useCallback(() => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+
+    window.speechSynthesis.cancel();
+
+    let text: string;
+    if (isEmojiMode) {
+      const pluralName = pluralize(currentEmoji.name, equation.num1);
+      const pluralName2 = pluralize(currentEmoji.name, equation.num2);
+      if (equation.operator === "+") {
+        text = `If I have ${equation.num1} ${pluralName} and add ${equation.num2} ${pluralName2}, how many ${pluralName} do I have?`;
+      } else {
+        text = `If I have ${equation.num1} ${pluralName} and take away ${equation.num2} ${pluralName2}, how many ${pluralName} do I have?`;
+      }
+    } else {
+      const operatorWord = equation.operator === "+" ? "plus" : "minus";
+      text = `What is ${equation.num1} ${operatorWord} ${equation.num2}?`;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.9;
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+
+    window.speechSynthesis.speak(utterance);
+  }, [equation, isEmojiMode, currentEmoji]);
+
+  return (
+    <button
+      onClick={speak}
+      disabled={isSpeaking}
+      className={`flex items-center justify-center w-12 h-12 rounded-full transition-all ${
+        isSpeaking
+          ? "bg-purple-300 scale-110"
+          : "bg-purple-500 hover:bg-purple-600 hover:scale-110"
+      } shadow-lg`}
+      aria-label="Read equation aloud"
+    >
+      <svg
+        className="w-6 h-6 text-white"
+        fill="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path d="M8 5v14l11-7z"/>
+      </svg>
+    </button>
+  );
+}
+
+function ModeToggle({
+  isEmojiMode,
+  onToggle
+}: {
+  isEmojiMode: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      onClick={onToggle}
+      className="flex items-center gap-2 px-3 py-1.5 bg-white/80 rounded-full shadow-md hover:bg-white transition-colors text-sm"
+    >
+      <span className={!isEmojiMode ? "font-bold" : "text-gray-500"}>123</span>
+      <div
+        className={`w-10 h-5 rounded-full relative transition-colors ${
+          isEmojiMode ? "bg-purple-500" : "bg-gray-300"
+        }`}
+      >
+        <div
+          className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+            isEmojiMode ? "translate-x-5" : "translate-x-0.5"
+          }`}
+        />
+      </div>
+      <span className={isEmojiMode ? "font-bold" : "text-gray-500"}>🍎</span>
+    </button>
+  );
 }
 
 interface Particle {
@@ -300,7 +509,7 @@ function Fireworks({ number, onComplete }: { number: number; onComplete: () => v
 
 function RainbowTitle() {
   return (
-    <h1 className="text-4xl md:text-6xl font-bold mb-8 text-center">
+    <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6 md:mb-8 text-center">
       {TITLE_LETTERS.map((letter, index) => (
         <span key={index} style={{ color: letter.color }}>
           {letter.char}
@@ -319,6 +528,8 @@ export default function MathGame() {
   const [score, setScore] = useState({ correct: 0, wrong: 0 });
   const [questionNumber, setQuestionNumber] = useState(0);
   const [showFireworks, setShowFireworks] = useState(false);
+  const [isEmojiMode, setIsEmojiMode] = useState(false);
+  const [currentEmoji, setCurrentEmoji] = useState<CountingEmoji>(COUNTING_EMOJIS[0]);
 
   const handleIntroComplete = useCallback(() => {
     setGameState("start");
@@ -330,6 +541,7 @@ export default function MathGame() {
     setChoices(generateAnswerChoices(newEquation.answer));
     setSelectedAnswer(null);
     setIsCorrect(null);
+    setCurrentEmoji(getRandomEmoji());
     setGameState("playing");
   }, []);
 
@@ -368,6 +580,10 @@ export default function MathGame() {
     }
   };
 
+  const toggleMode = () => {
+    setIsEmojiMode((prev) => !prev);
+  };
+
   const getButtonColor = (index: number, choice: number) => {
     if (gameState === "feedback" && equation) {
       // Correct answer - always show green and bouncing
@@ -396,7 +612,7 @@ export default function MathGame() {
   const showFloatingBackground = gameState === "start" || gameState === "roundEnd";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-400 to-red-400 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <div className="h-screen w-screen overflow-hidden bg-gradient-to-br from-purple-400 via-pink-400 to-red-400 flex flex-col items-center justify-center p-2 sm:p-4 relative">
       {gameState === "intro" && <IntroAnimation onComplete={handleIntroComplete} />}
 
       {showFloatingBackground && <FloatingBackground />}
@@ -408,12 +624,12 @@ export default function MathGame() {
       {gameState !== "intro" && <RainbowTitle />}
 
       {gameState === "start" && (
-        <div className="bg-white rounded-3xl p-8 shadow-2xl text-center relative z-10">
-          <p className="text-2xl mb-6 text-gray-700">Ready to play?</p>
-          <p className="text-lg mb-6 text-gray-500">Answer {EQUATIONS_PER_ROUND} math questions!</p>
+        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-2xl text-center relative z-10 max-w-sm sm:max-w-md">
+          <p className="text-xl sm:text-2xl mb-4 sm:mb-6 text-gray-700">Ready to play?</p>
+          <p className="text-base sm:text-lg mb-4 sm:mb-6 text-gray-500">Answer {EQUATIONS_PER_ROUND} math questions!</p>
           <button
             onClick={startGame}
-            className="bg-gradient-to-r from-green-400 to-blue-500 text-white text-3xl font-bold py-4 px-12 rounded-full transform hover:scale-110 transition-transform shadow-lg"
+            className="bg-gradient-to-r from-green-400 to-blue-500 text-white text-2xl sm:text-3xl font-bold py-3 sm:py-4 px-8 sm:px-12 rounded-full transform hover:scale-110 transition-transform shadow-lg"
           >
             Start!
           </button>
@@ -421,24 +637,38 @@ export default function MathGame() {
       )}
 
       {(gameState === "playing" || gameState === "feedback") && equation && (
-        <div className="bg-white rounded-3xl p-8 shadow-2xl text-center w-full max-w-lg relative z-10">
-          <div className="flex justify-between mb-4 text-lg">
-            <span className="text-green-600 font-bold">✓ {score.correct}</span>
-            <span className="text-gray-500">Question {questionNumber} of {EQUATIONS_PER_ROUND}</span>
-            <span className="text-red-600 font-bold">✗ {score.wrong}</span>
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-6 md:p-8 shadow-2xl text-center w-full max-w-xs sm:max-w-md md:max-w-lg relative z-10 flex flex-col">
+          {/* Header with score, mode toggle, and play button */}
+          <div className="flex items-center justify-between mb-2 sm:mb-4 gap-2">
+            <span className="text-green-600 font-bold text-sm sm:text-lg">✓ {score.correct}</span>
+            <div className="flex items-center gap-2">
+              <ModeToggle isEmojiMode={isEmojiMode} onToggle={toggleMode} />
+              <PlayButton equation={equation} isEmojiMode={isEmojiMode} currentEmoji={currentEmoji} />
+            </div>
+            <span className="text-red-600 font-bold text-sm sm:text-lg">✗ {score.wrong}</span>
           </div>
 
-          <div className="text-6xl md:text-7xl font-bold mb-8 text-gray-800">
-            {equation.num1} {equation.operator} {equation.num2} = ?
+          <div className="text-xs sm:text-sm text-gray-500 mb-2 sm:mb-4">
+            Question {questionNumber} of {EQUATIONS_PER_ROUND}
           </div>
 
-          <div className="grid grid-cols-5 gap-2 md:gap-4 mb-6">
+          {/* Equation Display */}
+          <div className="mb-4 sm:mb-6 md:mb-8 flex items-center justify-center min-h-[80px] sm:min-h-[120px]">
+            {isEmojiMode ? (
+              <EmojiEquationDisplay equation={equation} currentEmoji={currentEmoji} />
+            ) : (
+              <TextEquationDisplay equation={equation} />
+            )}
+          </div>
+
+          {/* Answer Choices */}
+          <div className="grid grid-cols-5 gap-1 sm:gap-2 md:gap-4 mb-3 sm:mb-6">
             {choices.map((choice, index) => (
               <button
                 key={index}
                 onClick={() => handleAnswer(choice)}
                 disabled={gameState === "feedback"}
-                className={`${getButtonColor(index, choice)} text-white text-2xl md:text-3xl font-bold py-4 px-2 md:px-6 rounded-xl transform transition-all duration-200 ${
+                className={`${getButtonColor(index, choice)} text-white text-lg sm:text-2xl md:text-3xl font-bold py-2 sm:py-4 px-1 sm:px-2 md:px-6 rounded-lg sm:rounded-xl transform transition-all duration-200 ${
                   gameState === "playing" ? "hover:scale-110 active:scale-95" : ""
                 } shadow-lg disabled:cursor-not-allowed`}
               >
@@ -447,21 +677,22 @@ export default function MathGame() {
             ))}
           </div>
 
+          {/* Feedback */}
           {gameState === "feedback" && (
-            <div className="mt-4">
+            <div className="mt-2 sm:mt-4">
               {isCorrect ? (
-                <div className="text-3xl font-bold text-green-600 animate-bounce">
+                <div className="text-xl sm:text-3xl font-bold text-green-600 animate-bounce">
                   Correct!
                 </div>
               ) : (
-                <div className="text-2xl font-bold text-red-600">
+                <div className="text-lg sm:text-2xl font-bold text-red-600">
                   The answer was {equation.answer}
                 </div>
               )}
               {!showFireworks && (
                 <button
                   onClick={nextQuestion}
-                  className="mt-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xl font-bold py-3 px-8 rounded-full transform hover:scale-110 transition-transform shadow-lg"
+                  className="mt-2 sm:mt-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-base sm:text-xl font-bold py-2 sm:py-3 px-6 sm:px-8 rounded-full transform hover:scale-110 transition-transform shadow-lg"
                 >
                   {questionNumber >= EQUATIONS_PER_ROUND ? "See Results" : "Next Question"}
                 </button>
@@ -472,17 +703,17 @@ export default function MathGame() {
       )}
 
       {gameState === "roundEnd" && (
-        <div className="bg-white rounded-3xl p-8 shadow-2xl text-center relative z-10">
-          <h2 className="text-4xl font-bold mb-6 text-gray-800">Round Complete!</h2>
-          <div className="text-6xl mb-4">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-2xl text-center relative z-10 max-w-sm sm:max-w-md">
+          <h2 className="text-2xl sm:text-4xl font-bold mb-4 sm:mb-6 text-gray-800">Round Complete!</h2>
+          <div className="text-4xl sm:text-6xl mb-4">
             {score.correct === EQUATIONS_PER_ROUND ? "⭐" : score.correct >= 2 ? "👏" : "💪"}
           </div>
-          <div className="text-2xl mb-4">
+          <div className="text-xl sm:text-2xl mb-4">
             <span className="text-green-600 font-bold">{score.correct} correct</span>
             {" "}&{" "}
             <span className="text-red-600 font-bold">{score.wrong} wrong</span>
           </div>
-          <p className="text-xl text-gray-600 mb-6">
+          <p className="text-lg sm:text-xl text-gray-600 mb-4 sm:mb-6">
             {score.correct === EQUATIONS_PER_ROUND
               ? "Perfect! You're a math superstar!"
               : score.correct >= 2
@@ -491,7 +722,7 @@ export default function MathGame() {
           </p>
           <button
             onClick={startGame}
-            className="bg-gradient-to-r from-green-400 to-blue-500 text-white text-2xl font-bold py-4 px-10 rounded-full transform hover:scale-110 transition-transform shadow-lg"
+            className="bg-gradient-to-r from-green-400 to-blue-500 text-white text-xl sm:text-2xl font-bold py-3 sm:py-4 px-8 sm:px-10 rounded-full transform hover:scale-110 transition-transform shadow-lg"
           >
             Play Again!
           </button>
