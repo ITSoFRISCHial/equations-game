@@ -1,0 +1,5 @@
+{
+  "domain": "times.jeremyfrisch.org",
+  "build_command": "npm run build",
+  "output_directory": "out"
+}

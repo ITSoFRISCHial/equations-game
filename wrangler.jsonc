@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "equations-game",
+  "account_id": "4aa4dc8bfeeeacfe7e284620753b9a75",
+  "compatibility_date": "2026-11-15",
+  "assets": {
+    "directory": "out"
+  },
+  "previews": {}
+}
