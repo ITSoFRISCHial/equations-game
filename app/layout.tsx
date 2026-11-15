@@ -13,17 +13,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Equations",
-  description: "A fun math game for kids",
+  metadataBase: new URL("https://times.jeremyfrisch.org"),
+  title: "Times",
+  description: "A fun multiplication game for kids",
   openGraph: {
-    title: "Equations",
-    description: "A fun math game for kids",
+    title: "Times",
+    description: "A fun multiplication game for kids",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Equations",
-    description: "A fun math game for kids",
+    title: "Times",
+    description: "A fun multiplication game for kids",
   },
 };
 

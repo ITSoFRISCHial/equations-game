@@ -5,7 +5,6 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 interface Equation {
   num1: number;
   num2: number;
-  operator: "+" | "-";
   answer: number;
 }
 
@@ -29,47 +28,62 @@ const COUNTING_EMOJIS: CountingEmoji[] = [
   { emoji: "🎈", name: "balloon" },
   { emoji: "⚽", name: "soccer ball" },
   { emoji: "🚗", name: "car" },
-  { emoji: "🚌", name: "bus" },
-  { emoji: "✈️", name: "airplane" },
   { emoji: "🚀", name: "rocket" },
   { emoji: "⭐", name: "star" },
-  { emoji: "❤️", name: "heart" },
   { emoji: "🌸", name: "flower" },
-  { emoji: "☀️", name: "sun" },
-  { emoji: "🏠", name: "house" },
+  { emoji: "🦄", name: "unicorn" },
+  { emoji: "🐢", name: "turtle" },
+  { emoji: "🦋", name: "butterfly" },
+  { emoji: "🍓", name: "strawberry" },
   { emoji: "🎁", name: "gift" },
-  { emoji: "🧦", name: "sock" },
 ];
 
 const RAINBOW_COLORS = [
-  "#FF0000",
-  "#FF7F00",
-  "#FFFF00",
-  "#00FF00",
-  "#0000FF",
-  "#4B0082",
-  "#9400D3",
+  "#FF3B3B",
+  "#FF9500",
+  "#FFD60A",
+  "#34C759",
+  "#00C2FF",
+  "#5E5CE6",
+  "#BF5AF2",
 ];
 
-const EQUATIONS_PER_ROUND = 3;
+const EQUATIONS_PER_ROUND = 5;
 
 const TITLE_LETTERS = [
-  { char: "E", color: "#FF0000" },
-  { char: "q", color: "#FF7F00" },
-  { char: "u", color: "#FFFF00" },
-  { char: "a", color: "#00FF00" },
-  { char: "+", color: "#0000FF" },
-  { char: "i", color: "#4B0082" },
-  { char: "o", color: "#9400D3" },
-  { char: "n", color: "#FF0000" },
-  { char: "s", color: "#FF7F00" },
+  { char: "T", color: "#FF3B3B" },
+  { char: "i", color: "#FF9500" },
+  { char: "m", color: "#FFD60A" },
+  { char: "e", color: "#34C759" },
+  { char: "s", color: "#00C2FF" },
+  { char: "✕", color: "#BF5AF2" },
 ];
+
+// Multiplication facts use factors 3..10 (no factors of 0, 1, or 2). The biggest
+// allowed product is chosen on the start screen and adjustable by fives.
+const MIN_FACTOR = 3;
+const MAX_FACTOR = 10;
+const DEFAULT_MAX_PRODUCT = 50;
+const MIN_MAX_PRODUCT = 15; // keeps at least a handful of facts (3×3, 3×4, 3×5)
+const CEILING_MAX_PRODUCT = 100; // 10×10, the largest possible with these factors
+const PRODUCT_STEP = 5;
+
+function buildFacts(maxProduct: number): Equation[] {
+  const facts: Equation[] = [];
+  for (let a = MIN_FACTOR; a <= MAX_FACTOR; a++) {
+    for (let b = MIN_FACTOR; b <= MAX_FACTOR; b++) {
+      if (a * b <= maxProduct) {
+        facts.push({ num1: a, num2: b, answer: a * b });
+      }
+    }
+  }
+  return facts;
+}
 
 interface FloatingSymbol {
   id: number;
   x: number;
   y: number;
-  symbol: "+" | "-";
   size: number;
   opacity: number;
   speed: number;
@@ -82,7 +96,6 @@ function generateFloatingSymbols(count: number): FloatingSymbol[] {
     id: i,
     x: Math.random() * 100,
     y: Math.random() * 100,
-    symbol: Math.random() > 0.5 ? "+" : "-",
     size: Math.random() * 40 + 30,
     opacity: Math.random() * 0.15 + 0.05,
     speed: Math.random() * 0.5 + 0.2,
@@ -126,7 +139,7 @@ function FloatingBackground() {
             transition: "top 0.05s linear",
           }}
         >
-          {s.symbol}
+          ✕
         </div>
       ))}
     </div>
@@ -135,36 +148,36 @@ function FloatingBackground() {
 
 function IntroAnimation({ onComplete }: { onComplete: () => void }) {
   const [isForming, setIsForming] = useState(false);
+  // Only render the scattered letters after mount so the randomized positions
+  // never differ between the server render and the first client render.
+  const [mounted, setMounted] = useState(false);
 
-  const initialPositions = useMemo(() =>
-    TITLE_LETTERS.map(() => ({
-      x: Math.random() * 80 + 10,
-      y: Math.random() * 80 + 10,
-      rotation: Math.random() * 720 - 360,
-      scale: Math.random() * 0.5 + 0.8,
-    })),
+  const initialPositions = useMemo(
+    () =>
+      TITLE_LETTERS.map(() => ({
+        x: Math.random() * 80 + 10,
+        y: Math.random() * 80 + 10,
+        rotation: Math.random() * 720 - 360,
+        scale: Math.random() * 0.5 + 0.8,
+      })),
     []
   );
 
-  const finalPositions = useMemo(() =>
-    TITLE_LETTERS.map((_, i) => ({
-      x: 50 + (i - 4) * 6,
-      y: 50,
-      rotation: 0,
-      scale: 1,
-    })),
+  const finalPositions = useMemo(
+    () =>
+      TITLE_LETTERS.map((_, i) => ({
+        x: 50 + (i - (TITLE_LETTERS.length - 1) / 2) * 8,
+        y: 50,
+        rotation: 0,
+        scale: 1,
+      })),
     []
   );
 
   useEffect(() => {
-    const formTimeout = setTimeout(() => {
-      setIsForming(true);
-    }, 100);
-
-    const completeTimeout = setTimeout(() => {
-      onComplete();
-    }, 3000);
-
+    setMounted(true);
+    const formTimeout = setTimeout(() => setIsForming(true), 100);
+    const completeTimeout = setTimeout(() => onComplete(), 3000);
     return () => {
       clearTimeout(formTimeout);
       clearTimeout(completeTimeout);
@@ -176,7 +189,7 @@ function IntroAnimation({ onComplete }: { onComplete: () => void }) {
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center">
       <FloatingBackground />
-      {TITLE_LETTERS.map((letter, index) => (
+      {mounted && TITLE_LETTERS.map((letter, index) => (
         <div
           key={index}
           className="absolute font-bold text-6xl md:text-8xl"
@@ -196,31 +209,24 @@ function IntroAnimation({ onComplete }: { onComplete: () => void }) {
   );
 }
 
-function generateEquation(): Equation {
-  const isAddition = Math.random() > 0.5;
-
-  if (isAddition) {
-    const answer = Math.floor(Math.random() * 21);
-    const num1 = Math.floor(Math.random() * (answer + 1));
-    const num2 = answer - num1;
-    return { num1, num2, operator: "+", answer };
-  } else {
-    const num1 = Math.floor(Math.random() * 21);
-    const num2 = Math.floor(Math.random() * (num1 + 1));
-    const answer = num1 - num2;
-    return { num1, num2, operator: "-", answer };
-  }
+function generateEquation(maxProduct: number): Equation {
+  const facts = buildFacts(maxProduct);
+  const base = facts[Math.floor(Math.random() * facts.length)];
+  // Randomly swap the order so e.g. both 3×4 and 4×3 appear.
+  return Math.random() > 0.5
+    ? base
+    : { num1: base.num2, num2: base.num1, answer: base.answer };
 }
 
-function generateAnswerChoices(correctAnswer: number): number[] {
+function generateAnswerChoices(correctAnswer: number, maxProduct: number): number[] {
   const choices = new Set<number>();
   choices.add(correctAnswer);
 
   while (choices.size < 5) {
-    const offset = Math.floor(Math.random() * 10) - 5;
+    const offset = Math.floor(Math.random() * 13) - 6;
     const wrongAnswer = correctAnswer + offset;
 
-    if (wrongAnswer >= 0 && wrongAnswer <= 20 && wrongAnswer !== correctAnswer) {
+    if (wrongAnswer >= 4 && wrongAnswer <= maxProduct && wrongAnswer !== correctAnswer) {
       choices.add(wrongAnswer);
     }
   }
@@ -243,22 +249,26 @@ function pluralize(name: string, count: number): string {
   return name + "s";
 }
 
-function EmojiGroup({ count, emoji, maxPerRow = 5 }: { count: number; emoji: string; maxPerRow?: number }) {
-  const rows: string[][] = [];
+/** A single group box holding `count` emoji. */
+function EmojiGroup({ count, emoji }: { count: number; emoji: string }) {
+  // Lay out the emoji in a tidy square-ish grid inside the group.
+  const perRow = count <= 3 ? count : count <= 6 ? 3 : Math.ceil(Math.sqrt(count));
+  const rows: number[] = [];
   let remaining = count;
-
   while (remaining > 0) {
-    const rowCount = Math.min(remaining, maxPerRow);
-    rows.push(Array(rowCount).fill(emoji));
+    const rowCount = Math.min(remaining, perRow);
+    rows.push(rowCount);
     remaining -= rowCount;
   }
 
   return (
-    <div className="flex flex-col items-center gap-0.5">
-      {rows.map((row, i) => (
+    <div className="flex flex-col items-center gap-0.5 bg-white/70 rounded-xl p-1.5 shadow-sm border-2 border-white">
+      {rows.map((rowCount, i) => (
         <div key={i} className="flex gap-0.5">
-          {row.map((e, j) => (
-            <span key={j} className="text-lg sm:text-xl md:text-2xl">{e}</span>
+          {Array.from({ length: rowCount }).map((_, j) => (
+            <span key={j} className="text-base sm:text-lg md:text-xl leading-none">
+              {emoji}
+            </span>
           ))}
         </div>
       ))}
@@ -266,48 +276,26 @@ function EmojiGroup({ count, emoji, maxPerRow = 5 }: { count: number; emoji: str
   );
 }
 
+/** Multiplication as `num1` groups of `num2` emoji. */
 function EmojiEquationDisplay({
   equation,
-  currentEmoji
+  currentEmoji,
 }: {
   equation: Equation;
   currentEmoji: CountingEmoji;
 }) {
   return (
-    <div className="flex items-center justify-center gap-2 sm:gap-4 w-full">
-      {/* First group */}
-      <div className="flex flex-col items-center">
-        <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-1">
-          {equation.num1}
-        </div>
-        <div className="bg-gray-100 rounded-xl p-2 min-h-[60px] flex items-center justify-center">
-          <EmojiGroup count={equation.num1} emoji={currentEmoji.emoji} />
-        </div>
+    <div className="flex flex-col items-center gap-2 w-full">
+      <div className="text-sm sm:text-base font-bold text-gray-500">
+        {equation.num1} groups of {equation.num2}
       </div>
-
-      {/* Operator */}
-      <div className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-800">
-        {equation.operator}
+      <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 max-w-full">
+        {Array.from({ length: equation.num1 }).map((_, i) => (
+          <EmojiGroup key={i} count={equation.num2} emoji={currentEmoji.emoji} />
+        ))}
       </div>
-
-      {/* Second group */}
-      <div className="flex flex-col items-center">
-        <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-1">
-          {equation.num2}
-        </div>
-        <div className="bg-gray-100 rounded-xl p-2 min-h-[60px] flex items-center justify-center">
-          <EmojiGroup count={equation.num2} emoji={currentEmoji.emoji} />
-        </div>
-      </div>
-
-      {/* Equals */}
-      <div className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-800">
-        =
-      </div>
-
-      {/* Question mark */}
-      <div className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-800">
-        ?
+      <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mt-1">
+        {equation.num1} <span className="text-purple-500">✕</span> {equation.num2} = ?
       </div>
     </div>
   );
@@ -316,7 +304,7 @@ function EmojiEquationDisplay({
 function TextEquationDisplay({ equation }: { equation: Equation }) {
   return (
     <div className="text-5xl sm:text-6xl md:text-7xl font-bold text-gray-800">
-      {equation.num1} {equation.operator} {equation.num2} = ?
+      {equation.num1} <span className="text-purple-500">✕</span> {equation.num2} = ?
     </div>
   );
 }
@@ -324,7 +312,7 @@ function TextEquationDisplay({ equation }: { equation: Equation }) {
 function PlayButton({
   equation,
   isEmojiMode,
-  currentEmoji
+  currentEmoji,
 }: {
   equation: Equation;
   isEmojiMode: boolean;
@@ -339,16 +327,11 @@ function PlayButton({
 
     let text: string;
     if (isEmojiMode) {
-      const pluralName = pluralize(currentEmoji.name, equation.num1);
-      const pluralName2 = pluralize(currentEmoji.name, equation.num2);
-      if (equation.operator === "+") {
-        text = `If I have ${equation.num1} ${pluralName} and add ${equation.num2} ${pluralName2}, how many ${pluralName} do I have?`;
-      } else {
-        text = `If I have ${equation.num1} ${pluralName} and take away ${equation.num2} ${pluralName2}, how many ${pluralName} do I have?`;
-      }
+      const singular = currentEmoji.name;
+      const pluralName = pluralize(currentEmoji.name, equation.num2);
+      text = `If I have ${equation.num1} groups of ${equation.num2} ${pluralName}, how many ${equation.num2 === 1 ? singular : pluralName} are there in all?`;
     } else {
-      const operatorWord = equation.operator === "+" ? "plus" : "minus";
-      text = `What is ${equation.num1} ${operatorWord} ${equation.num2}?`;
+      text = `What is ${equation.num1} times ${equation.num2}?`;
     }
 
     const utterance = new SpeechSynthesisUtterance(text);
@@ -365,18 +348,12 @@ function PlayButton({
       onClick={speak}
       disabled={isSpeaking}
       className={`flex items-center justify-center w-12 h-12 rounded-full transition-all ${
-        isSpeaking
-          ? "bg-purple-300 scale-110"
-          : "bg-purple-500 hover:bg-purple-600 hover:scale-110"
+        isSpeaking ? "bg-purple-300 scale-110" : "bg-purple-500 hover:bg-purple-600 hover:scale-110"
       } shadow-lg`}
-      aria-label="Read equation aloud"
+      aria-label="Read question aloud"
     >
-      <svg
-        className="w-6 h-6 text-white"
-        fill="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path d="M8 5v14l11-7z"/>
+      <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M8 5v14l11-7z" />
       </svg>
     </button>
   );
@@ -384,7 +361,7 @@ function PlayButton({
 
 function ModeToggle({
   isEmojiMode,
-  onToggle
+  onToggle,
 }: {
   isEmojiMode: boolean;
   onToggle: () => void;
@@ -393,6 +370,7 @@ function ModeToggle({
     <button
       onClick={onToggle}
       className="flex items-center gap-2 px-3 py-1.5 bg-white/80 rounded-full shadow-md hover:bg-white transition-colors text-sm"
+      aria-label="Switch between numbers and pictures"
     >
       <span className={!isEmojiMode ? "font-bold" : "text-gray-500"}>123</span>
       <div
@@ -429,11 +407,7 @@ function Fireworks({ number, onComplete }: { number: number; onComplete: () => v
   useEffect(() => {
     for (let i = 0; i < 5; i++) {
       setTimeout(() => {
-        const fw = {
-          x: Math.random() * 80 + 10,
-          y: Math.random() * 60 + 20,
-        };
-
+        const fw = { x: Math.random() * 80 + 10, y: Math.random() * 60 + 20 };
         const newParticles: Particle[] = [];
         for (let j = 0; j < 30; j++) {
           const angle = (Math.PI * 2 * j) / 30;
@@ -509,7 +483,7 @@ function Fireworks({ number, onComplete }: { number: number; onComplete: () => v
 
 function RainbowTitle() {
   return (
-    <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6 md:mb-8 text-center">
+    <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-4 sm:mb-6 md:mb-8 text-center drop-shadow-lg">
       {TITLE_LETTERS.map((letter, index) => (
         <span key={index} style={{ color: letter.color }}>
           {letter.char}
@@ -519,7 +493,7 @@ function RainbowTitle() {
   );
 }
 
-export default function MathGame() {
+export default function TimesGame() {
   const [gameState, setGameState] = useState<"intro" | "start" | "playing" | "feedback" | "roundEnd">("intro");
   const [equation, setEquation] = useState<Equation | null>(null);
   const [choices, setChoices] = useState<number[]>([]);
@@ -530,20 +504,25 @@ export default function MathGame() {
   const [showFireworks, setShowFireworks] = useState(false);
   const [isEmojiMode, setIsEmojiMode] = useState(false);
   const [currentEmoji, setCurrentEmoji] = useState<CountingEmoji>(COUNTING_EMOJIS[0]);
+  const [maxProduct, setMaxProduct] = useState(DEFAULT_MAX_PRODUCT);
 
-  const handleIntroComplete = useCallback(() => {
-    setGameState("start");
-  }, []);
+  const handleIntroComplete = useCallback(() => setGameState("start"), []);
 
   const startNewQuestion = useCallback(() => {
-    const newEquation = generateEquation();
+    const newEquation = generateEquation(maxProduct);
     setEquation(newEquation);
-    setChoices(generateAnswerChoices(newEquation.answer));
+    setChoices(generateAnswerChoices(newEquation.answer, maxProduct));
     setSelectedAnswer(null);
     setIsCorrect(null);
     setCurrentEmoji(getRandomEmoji());
     setGameState("playing");
-  }, []);
+  }, [maxProduct]);
+
+  const adjustMaxProduct = (delta: number) => {
+    setMaxProduct((prev) =>
+      Math.min(CEILING_MAX_PRODUCT, Math.max(MIN_MAX_PRODUCT, prev + delta))
+    );
+  };
 
   const startGame = () => {
     setScore({ correct: 0, wrong: 0 });
@@ -567,9 +546,7 @@ export default function MathGame() {
     }
   };
 
-  const handleFireworksComplete = () => {
-    setShowFireworks(false);
-  };
+  const handleFireworksComplete = () => setShowFireworks(false);
 
   const nextQuestion = () => {
     if (questionNumber >= EQUATIONS_PER_ROUND) {
@@ -580,21 +557,16 @@ export default function MathGame() {
     }
   };
 
-  const toggleMode = () => {
-    setIsEmojiMode((prev) => !prev);
-  };
+  const toggleMode = () => setIsEmojiMode((prev) => !prev);
 
   const getButtonColor = (index: number, choice: number) => {
     if (gameState === "feedback" && equation) {
-      // Correct answer - always show green and bouncing
       if (choice === equation.answer) {
         return "bg-green-500 hover:bg-green-500 scale-110 animate-bounce";
       }
-      // Wrong answer that was selected - show red
       if (choice === selectedAnswer && !isCorrect) {
         return "bg-red-500 hover:bg-red-500";
       }
-      // Other answers when wrong - gray them out
       if (!isCorrect) {
         return "bg-gray-400 hover:bg-gray-400 opacity-50";
       }
@@ -612,7 +584,7 @@ export default function MathGame() {
   const showFloatingBackground = gameState === "start" || gameState === "roundEnd";
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-gradient-to-br from-purple-400 via-pink-400 to-red-400 flex flex-col items-center justify-center p-2 sm:p-4 relative">
+    <div className="h-screen w-screen overflow-hidden bg-gradient-to-br from-indigo-400 via-purple-400 to-pink-400 flex flex-col items-center justify-center p-2 sm:p-4 relative">
       {gameState === "intro" && <IntroAnimation onComplete={handleIntroComplete} />}
 
       {showFloatingBackground && <FloatingBackground />}
@@ -625,8 +597,38 @@ export default function MathGame() {
 
       {gameState === "start" && (
         <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-2xl text-center relative z-10 max-w-sm sm:max-w-md">
-          <p className="text-xl sm:text-2xl mb-4 sm:mb-6 text-gray-700">Ready to play?</p>
-          <p className="text-base sm:text-lg mb-4 sm:mb-6 text-gray-500">Answer {EQUATIONS_PER_ROUND} math questions!</p>
+          <div className="text-5xl mb-3">✖️</div>
+          <p className="text-xl sm:text-2xl mb-3 text-gray-700 font-bold">Ready to play?</p>
+          <p className="text-base sm:text-lg mb-4 text-gray-500">
+            Answer {EQUATIONS_PER_ROUND} times questions! Tap 🍎 to see the pictures or 🔊 to hear it.
+          </p>
+
+          {/* Biggest-answer stepper */}
+          <div className="mb-5 sm:mb-6">
+            <p className="text-sm sm:text-base font-bold text-gray-600 mb-2">Biggest answer</p>
+            <div className="flex items-center justify-center gap-4">
+              <button
+                onClick={() => adjustMaxProduct(-PRODUCT_STEP)}
+                disabled={maxProduct <= MIN_MAX_PRODUCT}
+                aria-label="Make the biggest answer smaller"
+                className="flex items-center justify-center w-12 h-12 rounded-full bg-red-500 text-white text-3xl font-bold shadow-lg transform hover:scale-110 active:scale-95 transition-transform disabled:opacity-40 disabled:hover:scale-100 disabled:cursor-not-allowed"
+              >
+                −
+              </button>
+              <div className="min-w-[72px] text-4xl sm:text-5xl font-bold text-purple-600 tabular-nums">
+                {maxProduct}
+              </div>
+              <button
+                onClick={() => adjustMaxProduct(PRODUCT_STEP)}
+                disabled={maxProduct >= CEILING_MAX_PRODUCT}
+                aria-label="Make the biggest answer bigger"
+                className="flex items-center justify-center w-12 h-12 rounded-full bg-green-500 text-white text-3xl font-bold shadow-lg transform hover:scale-110 active:scale-95 transition-transform disabled:opacity-40 disabled:hover:scale-100 disabled:cursor-not-allowed"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
           <button
             onClick={startGame}
             className="bg-gradient-to-r from-green-400 to-blue-500 text-white text-2xl sm:text-3xl font-bold py-3 sm:py-4 px-8 sm:px-12 rounded-full transform hover:scale-110 transition-transform shadow-lg"
@@ -638,7 +640,6 @@ export default function MathGame() {
 
       {(gameState === "playing" || gameState === "feedback") && equation && (
         <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-6 md:p-8 shadow-2xl text-center w-full max-w-xs sm:max-w-md md:max-w-lg relative z-10 flex flex-col">
-          {/* Header with score, mode toggle, and play button */}
           <div className="flex items-center justify-between mb-2 sm:mb-4 gap-2">
             <span className="text-green-600 font-bold text-sm sm:text-lg">✓ {score.correct}</span>
             <div className="flex items-center gap-2">
@@ -652,7 +653,6 @@ export default function MathGame() {
             Question {questionNumber} of {EQUATIONS_PER_ROUND}
           </div>
 
-          {/* Equation Display */}
           <div className="mb-4 sm:mb-6 md:mb-8 flex items-center justify-center min-h-[80px] sm:min-h-[120px]">
             {isEmojiMode ? (
               <EmojiEquationDisplay equation={equation} currentEmoji={currentEmoji} />
@@ -661,7 +661,6 @@ export default function MathGame() {
             )}
           </div>
 
-          {/* Answer Choices */}
           <div className="grid grid-cols-5 gap-1 sm:gap-2 md:gap-4 mb-3 sm:mb-6">
             {choices.map((choice, index) => (
               <button
@@ -677,7 +676,6 @@ export default function MathGame() {
             ))}
           </div>
 
-          {/* Feedback */}
           {gameState === "feedback" && (
             <div className="mt-2 sm:mt-4">
               {isCorrect ? (
@@ -706,17 +704,16 @@ export default function MathGame() {
         <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-2xl text-center relative z-10 max-w-sm sm:max-w-md">
           <h2 className="text-2xl sm:text-4xl font-bold mb-4 sm:mb-6 text-gray-800">Round Complete!</h2>
           <div className="text-4xl sm:text-6xl mb-4">
-            {score.correct === EQUATIONS_PER_ROUND ? "⭐" : score.correct >= 2 ? "👏" : "💪"}
+            {score.correct === EQUATIONS_PER_ROUND ? "⭐" : score.correct >= 3 ? "👏" : "💪"}
           </div>
           <div className="text-xl sm:text-2xl mb-4">
-            <span className="text-green-600 font-bold">{score.correct} correct</span>
-            {" "}&{" "}
+            <span className="text-green-600 font-bold">{score.correct} correct</span> &{" "}
             <span className="text-red-600 font-bold">{score.wrong} wrong</span>
           </div>
           <p className="text-lg sm:text-xl text-gray-600 mb-4 sm:mb-6">
             {score.correct === EQUATIONS_PER_ROUND
-              ? "Perfect! You're a math superstar!"
-              : score.correct >= 2
+              ? "Perfect! You're a times superstar!"
+              : score.correct >= 3
               ? "Great job! Keep practicing!"
               : "Good try! Let's practice more!"}
           </p>
